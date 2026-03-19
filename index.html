@@ -3,86 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASURA.GAMES | Haptic Mode</title>
+    <title>ASURA.GAMES | Insane Difficulty</title>
     <style>
         :root { --neon-red: #ff3131; --gold: #ffd700; }
-        body { background-color: #050505; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; transition: 0.3s; overflow-x: hidden; }
-        
-        /* Boss Pulse Effect */
-        @keyframes bossPulse { 0% { background-color: #050505; } 50% { background-color: #300; } 100% { background-color: #050505; } }
-        .boss-active { animation: bossPulse 1s infinite; }
-
-        h1 { font-size: 3rem; color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red); margin: 10px 0; }
-        #power-up-status { height: 25px; color: #ffeb3b; font-weight: bold; font-size: 1.2rem; }
-
-        .game-container {
-            background: rgba(17, 17, 17, 0.9);
-            border: 3px solid var(--neon-red);
-            border-radius: 20px;
-            padding: 20px;
-            width: 320px;
-            margin: 10px auto;
-            min-height: 450px;
+        body { 
+            background-color: #050505; color: white; font-family: 'Segoe UI', sans-serif; 
+            text-align: center; margin: 0; overflow: hidden; height: 100vh;
+            user-select: none; touch-action: manipulation;
         }
+        
+        .boss-active { animation: bossPulse 0.5s infinite; }
+        @keyframes bossPulse { 0% { background-color: #050505; } 50% { background-color: #400; } 100% { background-color: #050505; } }
 
-        #score-board { font-size: 4.5rem; margin: 0; font-weight: 900; }
-        .target { font-size: 100px; cursor: pointer; user-select: none; display: inline-block; margin: 20px 0; transition: transform 0.05s; }
+        #ui-layer { pointer-events: none; position: relative; z-index: 10; }
+        h1 { font-size: 2.5rem; color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red); margin: 10px 0; }
         
-        .btn-start { background: var(--neon-red); color: white; border: none; padding: 15px; border-radius: 50px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1.1rem; }
-        .btn-start:disabled { background: #333; }
+        /* The Arena */
+        #game-area { width: 100vw; height: 70vh; position: relative; overflow: hidden; cursor: crosshair; }
+
+        #score-board { font-size: 4rem; margin: 0; font-weight: 900; }
+        #combo-tag { color: #00ffcc; font-weight: bold; height: 20px; }
+
+        .target { 
+            font-size: 120px; cursor: pointer; position: absolute;
+            transition: transform 0.05s; transform: translate(-50%, -50%);
+            left: 50%; top: 50%;
+        }
         
-        .share-section { margin-top: 20px; display: none; }
-        .share-btn { display: inline-block; padding: 10px; margin: 5px; border-radius: 5px; color: white; text-decoration: none; font-size: 0.8rem; font-weight: bold; }
+        .btn-start { 
+            background: var(--neon-red); color: white; border: none; padding: 15px 40px; 
+            border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.2rem;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        }
     </style>
 </head>
-<body>
+<body onclick="missClick(event)">
 
-    <h1>ASURA.GAMES</h1>
-    <div id="power-up-status"></div>
-
-    <div class="game-container">
-        <div id="level-tag" style="color:var(--gold)">LEVEL: MORTAL</div>
+    <div id="ui-layer">
+        <h1>ASURA.GAMES</h1>
+        <div id="level-tag" style="color:var(--gold)">DIFFICULTY: INSANE</div>
         <h2 id="score-board">0</h2>
+        <div id="combo-tag"></div>
         <div style="color:var(--neon-red)">TIME: <span id="seconds">40</span>s</div>
-        
-        <div class="target" id="creature" onclick="countClick()">👹</div>
-        
-        <button class="btn-start" id="start-btn" onclick="startGame()">ENTER THE ARENA</button>
-
-        <div class="share-section" id="share-ui">
-            <a href="#" class="share-btn" style="background:#25D366" id="wa-link">WhatsApp Share</a>
-        </div>
     </div>
+
+    <div id="game-area">
+        <div class="target" id="creature" onclick="countClick(event)">👹</div>
+    </div>
+
+    <button class="btn-start" id="start-btn" onclick="startGame()">START INSANE MODE</button>
 
     <script>
         let score = 0, timeLeft = 40, gameActive = false, isRageMode = false;
-        let combo = 0, lastClickTime = 0, currentSize = 100, timerInterval, powerUpInterval;
+        let combo = 0, lastClickTime = 0, currentSize = 120, timerInterval, powerUpInterval;
 
-        // VIBRATION HELPER
-        function vibrate(ms) {
-            if ("vibrate" in navigator) {
-                navigator.vibrate(ms);
-            }
-        }
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSfx(f, t, d) {
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
-            g.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(); o.stop(audioCtx.currentTime + d);
-        }
+        function vibrate(ms) { if ("vibrate" in navigator) navigator.vibrate(ms); }
 
         function startGame() {
-            audioCtx.resume();
-            score = 0; timeLeft = 40; currentSize = 100; gameActive = true;
+            score = 0; timeLeft = 40; currentSize = 120; combo = 0; gameActive = true;
             document.getElementById('score-board').innerText = "0";
-            document.getElementById('start-btn').disabled = true;
-            document.getElementById('share-ui').style.display = "none";
-            document.body.classList.remove('boss-active');
-            
-            vibrate(100); // Start buzz
+            document.getElementById('start-btn').style.display = "none";
+            resetCreature();
 
             timerInterval = setInterval(() => {
                 timeLeft--;
@@ -90,56 +71,77 @@
                 if (timeLeft <= 0) endGame();
             }, 1000);
 
-            powerUpInterval = setInterval(() => { if(gameActive) triggerRage(); }, 5000);
+            powerUpInterval = setInterval(() => { if(gameActive) triggerRage(); }, 6000);
         }
 
         function triggerRage() {
             isRageMode = true;
-            document.getElementById('power-up-status').innerText = "🔥 RAGE MODE 🔥";
-            vibrate([100, 50, 100]); // Rage heartbeat pattern
-            setTimeout(() => { isRageMode = false; document.getElementById('power-up-status').innerText = ""; }, 2000);
+            document.getElementById('level-tag').innerText = "🔥 RAGE ACTIVE 🔥";
+            vibrate([50, 50, 50]);
+            setTimeout(() => { isRageMode = false; updateLevelTag(); }, 2000);
         }
 
-        function countClick() {
+        function missClick(e) {
+            if (!gameActive || e.target.id === "creature" || e.target.id === "start-btn") return;
+            combo = 0; // RESET COMBO
+            score = Math.max(0, score - 5); // PENALTY
+            document.getElementById('score-board').innerText = score;
+            document.getElementById('combo-tag').innerText = "MISS! COMBO LOST";
+            vibrate(100);
+        }
+
+        function countClick(e) {
+            e.stopPropagation(); // Prevents missClick from firing
             if (!gameActive) return;
+            
             const now = Date.now();
-            combo = (now - lastClickTime < 800) ? combo + 1 : 1;
+            combo = (now - lastClickTime < 600) ? combo + 1 : 1; // Faster combo window (600ms)
             lastClickTime = now;
 
-            let pts = isRageMode ? 4 : (combo >= 20 ? 3 : (combo >= 10 ? 2 : 1));
+            let pts = isRageMode ? 2 : (combo >= 20 ? 2 : 1); // Reduced point multiplier
             score += pts;
             document.getElementById('score-board').innerText = score;
+            document.getElementById('combo-tag').innerText = `COMBO X${combo}`;
 
             const c = document.getElementById('creature');
-            
-            // Boss Evolution + Vibration
-            if (score >= 70 && !document.body.classList.contains('boss-active')) { 
-                document.body.classList.add('boss-active');
-                c.innerText = "🐲🐲🐲"; 
-                vibrate(500); // Heavy boss arrival buzz
+            updateLevelTag();
+
+            // Teleport Mechanic (After 150 points)
+            if (score >= 150) {
+                const area = document.getElementById('game-area');
+                const x = Math.random() * (area.clientWidth - 100) + 50;
+                const y = Math.random() * (area.clientHeight - 100) + 50;
+                c.style.left = x + "px";
+                c.style.top = y + "px";
             }
 
-            if (isRageMode) currentSize += 5; else if (currentSize > 15) currentSize -= 2.7;
+            // Shrink Logic (4.0x)
+            if (isRageMode) currentSize += 3; else if (currentSize > 20) currentSize -= 4.0;
             c.style.fontSize = currentSize + "px";
             
-            playSfx(200 + (combo * 10), 'square', 0.05);
-            vibrate(15); // Tiny hit vibration
-            
-            c.style.transform = "scale(1.2)";
-            setTimeout(() => c.style.transform = "scale(1)", 50);
+            vibrate(15);
+        }
+
+        function updateLevelTag() {
+            const l = document.getElementById('level-tag');
+            const c = document.getElementById('creature');
+            if (score >= 150) { l.innerText = "BOSS: TELEPORT DRAGON"; c.innerText = "🐲"; document.body.classList.add('boss-active'); }
+            else if (score >= 70) { l.innerText = "BOSS: 7-HEADED"; c.innerText = "🐲🐲🐲"; }
+            else if (score >= 20) { l.innerText = "LEVEL: QILIN"; c.innerText = "🦄"; }
+        }
+
+        function resetCreature() {
+            const c = document.getElementById('creature');
+            c.style.left = "50%"; c.style.top = "50%";
+            c.innerText = "👹"; c.style.fontSize = "120px";
         }
 
         function endGame() {
             gameActive = false;
             clearInterval(timerInterval); clearInterval(powerUpInterval);
-            document.getElementById('start-btn').disabled = false;
-            vibrate([200, 100, 200]); // Game over pattern
-            
-            const waUrl = `https://api.whatsapp.com/send?text=I scored ${score} on ASURA.GAMES! Can you beat a Legend? 🔥`;
-            document.getElementById('wa-link').href = waUrl;
-            document.getElementById('share-ui').style.display = "block";
-            
-            alert("BATTLE OVER! SCORE: " + score);
+            document.getElementById('start-btn').style.display = "block";
+            document.body.classList.remove('boss-active');
+            alert("BATTLE OVER! FINAL SCORE: " + score);
         }
     </script>
 </body>
